@@ -10,6 +10,6 @@
 {challenging_player_performance}
 {extra_hint}
 
-你需要输出一个完整的json结构，包含两个键值对：
+你需要在一行输出一个完整的json结构（可以使用以下标准来提取且 1.整个回复只能有一副花括号以方便提取json 2.不使用类似\"、\n的转义符 3.不使用类似 ‘’‘json 的markdown格式返回json值 4.除了用来定义键值和类型为字符串的项值外，不要包含任何引号以确保字符串合法 5.json返回值一定要能够通过json.loads读取），包含两个键值对：
 "was_challenged": bool，表示是否选择质疑
-"challenge_reason": str，几句话解释选择质疑/不质疑的理由
+"challenge_reason": str，几句话解释选择质疑/不质疑的理由（尽量使用中文为通用语言）
