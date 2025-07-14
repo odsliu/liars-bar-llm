@@ -1,6 +1,7 @@
 import random
-import json
+import json, json_repair
 import re
+import time
 from typing import List, Dict
 from llm_client import LLMClient
 
@@ -57,7 +58,7 @@ class Player:
     def choose_cards_to_play(self,
                         round_base_info: str,
                         round_action_info: str,
-                        play_decision_info: str) -> Dict:
+                        play_decision_info: str): # -> Dict:
         """
         玩家选择出牌
         
@@ -89,7 +90,7 @@ class Player:
         )
         
         # 尝试获取有效的JSON响应，最多重试五次
-        for attempt in range(5):
+        for attempt in range(3):
             # 每次都发送相同的原始prompt
             messages = [
                 {"role": "user", "content": prompt}
@@ -102,10 +103,23 @@ class Player:
                 json_match = re.search(r'({[\s\S]*})', content)
                 if json_match:
                     json_str = json_match.group(1)
-                    result = json.loads(json_str)
+                    json_str = re.sub(r'\\', '', json_str)
+                    json_str = json_str.replace('\n','')
+                    if json_str.count('"played_cards"') <= 0 and json_str.count('played_cards') >= 1:
+                        json_str = json_str.replace('played_cards','"played_cards"')
+                    if json_str.count('"behavior"') <= 0 and json_str.count('behavior') >= 1:
+                        json_str = json_str.replace('behavior','"behavior"')
+                    if json_str.count('"play_reason"') <= 0 and json_str.count('play_reason') >= 1:
+                        json_str = json_str.replace('play_reason','"play_reason"')
+                    with open('res.txt','w+') as f:
+                        f.write(content)
+                    try:
+                        result = json.loads(json_str)
+                    except:
+                        result = json_repair.loads(json_str)
                     
                     # 验证JSON格式是否符合要求
-                    if all(key in result for key in ["played_cards", "behavior", "play_reason"]):
+                    if all(key in result for key in ["played_cards", "behavior", "play_reason"]) and result != '' and result != None and result != {}:
                         # 确保played_cards是列表
                         if not isinstance(result["played_cards"], list):
                             result["played_cards"] = [result["played_cards"]]
@@ -123,14 +137,18 @@ class Player:
             except Exception as e:
                 # 仅记录错误，不修改重试请求
                 print(f"尝试 {attempt+1} 解析失败: {str(e)}")
-        raise RuntimeError(f"玩家 {self.name} 的choose_cards_to_play方法在多次尝试后失败")
+                if attempt==3:
+                    time.sleep(60*9)
+                time.sleep(60)
+        return json.loads(input(content + ': ')), ''
+        #raise RuntimeError(f"玩家 {self.name} 的choose_cards_to_play方法在多次尝试后失败")
 
     def decide_challenge(self,
                         round_base_info: str,
                         round_action_info: str,
                         challenge_decision_info: str,
                         challenging_player_performance: str,
-                        extra_hint: str) -> bool:
+                        extra_hint: str):# -> bool:
         """
         玩家决定是否对上一位玩家的出牌进行质疑
         
@@ -165,23 +183,39 @@ class Player:
         )
         
         # 尝试获取有效的JSON响应，最多重试五次
-        for attempt in range(5):
+        for attempt in range(4):
             # 每次都发送相同的原始prompt
-            messages = [
-                {"role": "user", "content": prompt}
-            ]
+            if attempt >= 1:
+                messages = [
+                    {"role": "user", "content": prompt+"上次回答json疑似存在格式问题。"}
+                ]
+            else:
+                messages = [
+                    {"role": "user", "content": prompt}
+                ]
             
             try:
                 content, reasoning_content = self.llm_client.chat(messages, model=self.model_name)
                 
                 # 解析JSON响应
                 json_match = re.search(r'({[\s\S]*})', content)
+                with open('res1.txt','w+') as f:
+                        f.write(content)
                 if json_match:
                     json_str = json_match.group(1)
-                    result = json.loads(json_str)
-                    
+                    json_str = re.sub(r'\\', '', json_str)
+                    json_str = json_str.replace('\n','')
+                    if json_str.count('"was_challenged"') <= 0 and json_str.count('was_challenged') >= 1:
+                        json_str = json_str.replace('was_challenged','"was_challenged"')
+                    if json_str.count('"challenge_reason"') <= 0 and json_str.count('challenge_reason') >= 1:
+                        json_str = json_str.replace('challenge_reason','"challenge_reason"')
+                    try:
+                        result = json.loads(json_str)
+                    except:
+                        result = json_repair.loads(json_str)
+
                     # 验证JSON格式是否符合要求
-                    if all(key in result for key in ["was_challenged", "challenge_reason"]):
+                    if all(key in result for key in ["was_challenged", "challenge_reason"]) and result != None and result != '' and result != {}:
                         # 确保was_challenged是布尔值
                         if isinstance(result["was_challenged"], bool):
                             return result, reasoning_content
@@ -189,7 +223,9 @@ class Player:
             except Exception as e:
                 # 仅记录错误，不修改重试请求
                 print(f"尝试 {attempt+1} 解析失败: {str(e)}")
-        raise RuntimeError(f"玩家 {self.name} 的decide_challenge方法在多次尝试后失败")
+                time.sleep(60)
+        return json.loads(input(content + ': ')), ''
+        #raise RuntimeError(f"玩家 {self.name} 的decide_challenge方法在多次尝试后失败")
 
     def reflect(self, alive_players: List[str], round_base_info: str, round_action_info: str, round_result: str) -> None:
         """
@@ -231,16 +267,16 @@ class Player:
             messages = [
                 {"role": "user", "content": prompt}
             ]
-            
-            try:
-                content, _ = self.llm_client.chat(messages, model=self.model_name)
-                
-                # 更新对该玩家的印象
-                self.opinions[player_name] = content.strip()
-                print(f"{self.name} 更新了对 {player_name} 的印象")
-                
-            except Exception as e:
-                print(f"反思玩家 {player_name} 时出错: {str(e)}")
+            for a in range(4):
+                try:
+                    content, _ = self.llm_client.chat(messages, model=self.model_name)
+                    # 更新对该玩家的印象
+                    self.opinions[player_name] = content.strip()
+                    print(f"{self.name} 更新了对 {player_name} 的印象")
+                except Exception as e:
+                    a = a + 1
+                    time.sleep(60)
+                    print(f"反思玩家 {player_name} 时出错: {str(e)}")
 
     def process_penalty(self) -> bool:
         """处理惩罚"""
