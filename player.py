@@ -97,8 +97,11 @@ class Player:
             ]
             
             try:
-                content, reasoning_content = self.llm_client.chat(messages, model=self.model_name)
-                
+                content, reasoning_content, suc = self.llm_client.chat(messages, model=self.model_name)
+
+                if not suc:
+                    continue
+
                 # 尝试从内容中提取JSON部分
                 json_match = re.search(r'({[\s\S]*})', content)
                 if json_match:
@@ -106,11 +109,11 @@ class Player:
                     json_str = re.sub(r'\\', '', json_str)
                     json_str = json_str.replace('\n','')
                     if json_str.count('"played_cards"') <= 0 and json_str.count('played_cards') >= 1:
-                        json_str = json_str.replace('played_cards','"played_cards"')
+                        json_str = json_str.replace('played_cards','"played_cards"',1)
                     if json_str.count('"behavior"') <= 0 and json_str.count('behavior') >= 1:
-                        json_str = json_str.replace('behavior','"behavior"')
+                        json_str = json_str.replace('behavior','"behavior"',1)
                     if json_str.count('"play_reason"') <= 0 and json_str.count('play_reason') >= 1:
-                        json_str = json_str.replace('play_reason','"play_reason"')
+                        json_str = json_str.replace('play_reason','"play_reason"',1)
                     with open('res.txt','w+') as f:
                         f.write(content)
                     try:
@@ -195,8 +198,11 @@ class Player:
                 ]
             
             try:
-                content, reasoning_content = self.llm_client.chat(messages, model=self.model_name)
-                
+                content, reasoning_content, suc = self.llm_client.chat(messages, model=self.model_name)
+
+                if not suc:
+                    continue
+
                 # 解析JSON响应
                 json_match = re.search(r'({[\s\S]*})', content)
                 with open('res1.txt','w+') as f:
@@ -206,9 +212,9 @@ class Player:
                     json_str = re.sub(r'\\', '', json_str)
                     json_str = json_str.replace('\n','')
                     if json_str.count('"was_challenged"') <= 0 and json_str.count('was_challenged') >= 1:
-                        json_str = json_str.replace('was_challenged','"was_challenged"')
+                        json_str = json_str.replace('was_challenged','"was_challenged"',1)
                     if json_str.count('"challenge_reason"') <= 0 and json_str.count('challenge_reason') >= 1:
-                        json_str = json_str.replace('challenge_reason','"challenge_reason"')
+                        json_str = json_str.replace('challenge_reason','"challenge_reason"',1)
                     try:
                         result = json.loads(json_str)
                     except:
@@ -269,10 +275,13 @@ class Player:
             ]
             for a in range(4):
                 try:
-                    content, _ = self.llm_client.chat(messages, model=self.model_name)
+                    content, _,suc = self.llm_client.chat(messages, model=self.model_name)
                     # 更新对该玩家的印象
-                    self.opinions[player_name] = content.strip()
-                    print(f"{self.name} 更新了对 {player_name} 的印象")
+                    if suc:
+                        self.opinions[player_name] = content.strip()
+                        print(f"{self.name} 更新了对 {player_name} 的印象")
+                        continue
+                    print('反思玩家时因报错跳过一次机会')
                 except Exception as e:
                     a = a + 1
                     time.sleep(60)
