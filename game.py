@@ -401,19 +401,15 @@ if __name__ == '__main__':
     player_configs = [
         {
             "name": "DeepSeek",
-            "model": "deepseek-r1"
+            "model": "deepseek-reasoner"
         },
         {
             "name": "ChatGPT",
-            "model": "o3-mini"
+            "model": "gpt-4o-mini"
         },
         {
             "name": "Claude",
-            "model": "claude-3.7-sonnet"
-        },
-        {
-            "name": "Gemini",
-            "model": "gemini-2.0-flash-thinking"
+            "model": "claude-3-7-sonnet-20250219-thinking"
         }
     ]
 
