@@ -2,7 +2,7 @@ import random
 import json, json_repair
 import re
 import time
-from typing import List, Dict
+from typing import *
 
 import search
 from llm_client import LLMClient
