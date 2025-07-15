@@ -54,7 +54,7 @@ class Player:
 
     def print_status(self) -> None:
         """打印玩家状态"""
-        print(f"{self.name} （自动识别参数量：{self.model_par}） - 手牌: {', '.join(self.hand)} - "
+        print(f"{self.name} （自动识别参数量：{self.model_par if self.model_par != '-1.0B' else '无法识别'}） - 手牌: {', '.join(self.hand)} - "
               f"子弹位置: {self.bullet_position} - 当前弹舱位置: {self.current_bullet_position}")
         
     def init_opinions(self, other_players: List["Player"]) -> None:
