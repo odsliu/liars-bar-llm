@@ -1,6 +1,6 @@
 from openai import OpenAI
 API_BASE_URL = "http://127.0.0.1:3000/v1"
-API_KEY = "sk-xxx"
+API_KEY = "sk-3XYjzVhgI7wlXONOMxwuM3lljv9Gh97fuAUnhLJkhqLgvxyU"
 
 class LLMClient:
     def __init__(self, api_key=API_KEY, base_url=API_BASE_URL):
@@ -32,13 +32,13 @@ class LLMClient:
                 content = message.content if message.content else ""
                 reasoning_content = getattr(message, "reasoning_content", "")
                 print(f"LLM推理内容: {content}")
-                return content, reasoning_content
+                return content, reasoning_content, True
             
-            return "", "",True
+            return "", "", False
                 
         except Exception as e:
             print(f"LLM调用出错: {str(e)}")
-            return "", "",False
+            return "", "", False
 
 # 使用示例
 if __name__ == "__main__":
