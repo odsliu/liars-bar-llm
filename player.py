@@ -202,15 +202,9 @@ class Player:
         
         # 尝试获取有效的JSON响应，最多重试五次
         for attempt in range(4):
-            # 每次都发送相同的原始prompt
-            if attempt >= 1:
-                messages = [
-                    {"role": "user", "content": prompt+"上次回答json疑似存在格式问题。"}
-                ]
-            else:
-                messages = [
-                    {"role": "user", "content": prompt}
-                ]
+            messages = [
+                {"role": "user", "content": prompt}
+            ]
             
             try:
                 content, reasoning_content, suc = self.llm_client.chat(messages, model=self.model_name)
@@ -289,9 +283,9 @@ class Player:
             messages = [
                 {"role": "user", "content": prompt}
             ]
-            for a in range(4):
+            for a in range(3):
                 try:
-                    content, _,suc = self.llm_client.chat(messages, model=self.model_name)
+                    content, _, suc = self.llm_client.chat(messages, model=self.model_name)
                     # 更新对该玩家的印象
                     if suc:
                         self.opinions[player_name] = content.strip()
@@ -299,7 +293,7 @@ class Player:
                         continue
                     print('反思玩家时因报错跳过一次机会')
                 except Exception as e:
-                    a = a + 1
+                    a += 1
                     time.sleep(60)
                     print(f"反思玩家 {player_name} 时出错: {str(e)}")
 
