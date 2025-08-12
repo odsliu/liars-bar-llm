@@ -28,17 +28,17 @@
 
 ## 配置
 
-使用conda环境配置相应依赖包：
+使用pip配置相应依赖包：
 
 ```
-pip install openai
+pip install openai json-repair 
 ```
 
 本项目的API配置在`llm_client.py`中。
 
 本项目利用了New API https://github.com/Calcium-Ion/new-api?tab=readme-ov-file 配置了统一的接口调用格式。使用时需自行配置相应模型的API接口。
 
-也可以采用类似的API管理项目One API https://github.com/songquanpeng/one-api 实现统一的接口调用。
+也可以采用类似的API管理项目One API https://github.com/songquanpeng/one-api（推荐方案）实现统一的接口调用。
 
 ## 使用方法
 
@@ -85,4 +85,4 @@ python game_analyze.py
 
 ## 已知问题
 
-模型在出牌和质疑阶段的输出可能不稳定，当输出无法满足游戏规定时，会自动重试。如果多次因为输出问题中断运行，可在`player.py`的`choose_cards_to_play`和`decide_challenge`中增加调用大模型的重试次数，或修改`prompt`文件夹中的`play_card_prompt_template.txt`和`challenge_prompt_template.txt`提示词强化对输出格式的限制（可能对模型的推理能力有一定影响）。
+模型在出牌和质疑阶段的输出可能不稳定，当输出无法满足游戏规定时，会自动尝试通过json-repair库进行修复，若失败将请求用户手动进行json格式化。如果多次因为输出问题需要手动格式化，尝试修改`prompt`文件夹中的`play_card_prompt_template.txt`和`challenge_prompt_template.txt`提示词强化对输出格式的限制（可能对模型的推理能力有一定影响）。

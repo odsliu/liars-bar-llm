@@ -1,6 +1,7 @@
 from openai import OpenAI
-API_BASE_URL = "http://127.0.0.1:3000/v1"
-API_KEY = "sk-3XYjzVhgI7wlXONOMxwuM3lljv9Gh97fuAUnhLJkhqLgvxyU"
+
+API_BASE_URL = "http://127.0.0.1:3000/v1" #your one-api address
+API_KEY = "sk-xxxxxxxxxxxxxx..." #your key for your one-api server
 
 class LLMClient:
     def __init__(self, api_key=API_KEY, base_url=API_BASE_URL):
