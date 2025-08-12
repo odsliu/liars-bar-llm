@@ -1,4 +1,5 @@
 from openai import OpenAI
+
 API_BASE_URL = "http://127.0.0.1:3000/v1" #your one-api address
 API_KEY = "sk-xxxxxxxxxxxxxx..." #your key for your one-api server
 
@@ -32,13 +33,13 @@ class LLMClient:
                 content = message.content if message.content else ""
                 reasoning_content = getattr(message, "reasoning_content", "")
                 print(f"LLM推理内容: {content}")
-                return content, reasoning_content
+                return content, reasoning_content, True
             
-            return "", ""
+            return "", "", False
                 
         except Exception as e:
             print(f"LLM调用出错: {str(e)}")
-            return "", ""
+            return "", "", False
 
 # 使用示例
 if __name__ == "__main__":

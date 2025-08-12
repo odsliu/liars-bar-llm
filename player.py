@@ -2,8 +2,11 @@ import random
 import json, json_repair
 import re
 import time
-from typing import List, Dict
+from typing import *
+
+import search
 from llm_client import LLMClient
+from tkinter.messagebox import showwarning
 
 RULE_BASE_PATH = "prompt/rule_base.txt"
 PLAY_CARD_PROMPT_TEMPLATE_PATH = "prompt/play_card_prompt_template.txt"
@@ -21,6 +24,17 @@ class Player:
         self.name = name
         self.hand = []
         self.alive = True
+        _, self.pars = search.search_bing_for_model_params(model_name)
+        self.parameter = []
+        self.model_par = '-1.0B'
+        for i, result in enumerate(self.pars, 1):
+            # 收集找到的参数大小
+            if result['param_size'] != "未找到参数信息":
+                self.parameter.append(result['param_size'])
+        for size in self.parameter:
+            if float(size[:-1]) >= float(self.model_par[:-1]):
+                self.model_par = size
+        del self.pars,self.parameter
         self.bullet_position = random.randint(0, 5)
         self.current_bullet_position = 0
         self.opinions = {}
@@ -40,7 +54,7 @@ class Player:
 
     def print_status(self) -> None:
         """打印玩家状态"""
-        print(f"{self.name} - 手牌: {', '.join(self.hand)} - "
+        print(f"{self.name} （自动识别参数量：{self.model_par if self.model_par != '-1.0B' else '无法识别'}） - 手牌: {', '.join(self.hand)} - "
               f"子弹位置: {self.bullet_position} - 当前弹舱位置: {self.current_bullet_position}")
         
     def init_opinions(self, other_players: List["Player"]) -> None:
@@ -50,7 +64,7 @@ class Player:
             other_players: 其他玩家列表
         """
         self.opinions = {
-            player.name: "还不了解这个玩家"
+            player.name: "你还不了解这个玩家"
             for player in other_players
             if player.name != self.name
         }
@@ -97,8 +111,11 @@ class Player:
             ]
             
             try:
-                content, reasoning_content = self.llm_client.chat(messages, model=self.model_name)
-                
+                content, reasoning_content, suc = self.llm_client.chat(messages, model=self.model_name)
+
+                if not suc:
+                    continue
+
                 # 尝试从内容中提取JSON部分
                 json_match = re.search(r'({[\s\S]*})', content)
                 if json_match:
@@ -106,11 +123,11 @@ class Player:
                     json_str = re.sub(r'\\', '', json_str)
                     json_str = json_str.replace('\n','')
                     if json_str.count('"played_cards"') <= 0 and json_str.count('played_cards') >= 1:
-                        json_str = json_str.replace('played_cards','"played_cards"')
+                        json_str = json_str.replace('played_cards','"played_cards"',1)
                     if json_str.count('"behavior"') <= 0 and json_str.count('behavior') >= 1:
-                        json_str = json_str.replace('behavior','"behavior"')
+                        json_str = json_str.replace('behavior','"behavior"',1)
                     if json_str.count('"play_reason"') <= 0 and json_str.count('play_reason') >= 1:
-                        json_str = json_str.replace('play_reason','"play_reason"')
+                        json_str = json_str.replace('play_reason','"play_reason"',1)
                     with open('res.txt','w+') as f:
                         f.write(content)
                     try:
@@ -140,7 +157,8 @@ class Player:
                 if attempt==3:
                     time.sleep(60*9)
                 time.sleep(60)
-        return json.loads(input(content + ': ')), ''
+        showwarning('注意','json自动修复失败，请在终端内手动修正！')
+        return json.loads(input('大语言模型输出：' + content + '请手动修正' +': ')), ''
         #raise RuntimeError(f"玩家 {self.name} 的choose_cards_to_play方法在多次尝试后失败")
 
     def decide_challenge(self,
@@ -184,19 +202,16 @@ class Player:
         
         # 尝试获取有效的JSON响应，最多重试五次
         for attempt in range(4):
-            # 每次都发送相同的原始prompt
-            if attempt >= 1:
-                messages = [
-                    {"role": "user", "content": prompt+"上次回答json疑似存在格式问题。"}
-                ]
-            else:
-                messages = [
-                    {"role": "user", "content": prompt}
-                ]
+            messages = [
+                {"role": "user", "content": prompt}
+            ]
             
             try:
-                content, reasoning_content = self.llm_client.chat(messages, model=self.model_name)
-                
+                content, reasoning_content, suc = self.llm_client.chat(messages, model=self.model_name)
+
+                if not suc:
+                    continue
+
                 # 解析JSON响应
                 json_match = re.search(r'({[\s\S]*})', content)
                 with open('res1.txt','w+') as f:
@@ -206,9 +221,9 @@ class Player:
                     json_str = re.sub(r'\\', '', json_str)
                     json_str = json_str.replace('\n','')
                     if json_str.count('"was_challenged"') <= 0 and json_str.count('was_challenged') >= 1:
-                        json_str = json_str.replace('was_challenged','"was_challenged"')
+                        json_str = json_str.replace('was_challenged','"was_challenged"',1)
                     if json_str.count('"challenge_reason"') <= 0 and json_str.count('challenge_reason') >= 1:
-                        json_str = json_str.replace('challenge_reason','"challenge_reason"')
+                        json_str = json_str.replace('challenge_reason','"challenge_reason"',1)
                     try:
                         result = json.loads(json_str)
                     except:
@@ -224,7 +239,8 @@ class Player:
                 # 仅记录错误，不修改重试请求
                 print(f"尝试 {attempt+1} 解析失败: {str(e)}")
                 time.sleep(60)
-        return json.loads(input(content + ': ')), ''
+        showwarning('注意', 'json自动修复失败，请在终端内手动修正！')
+        return json.loads(input('大语言模型输出：' + content + '请手动修正' +': ')), ''
         #raise RuntimeError(f"玩家 {self.name} 的decide_challenge方法在多次尝试后失败")
 
     def reflect(self, alive_players: List[str], round_base_info: str, round_action_info: str, round_result: str) -> None:
@@ -267,14 +283,17 @@ class Player:
             messages = [
                 {"role": "user", "content": prompt}
             ]
-            for a in range(4):
+            for a in range(3):
                 try:
-                    content, _ = self.llm_client.chat(messages, model=self.model_name)
+                    content, _, suc = self.llm_client.chat(messages, model=self.model_name)
                     # 更新对该玩家的印象
-                    self.opinions[player_name] = content.strip()
-                    print(f"{self.name} 更新了对 {player_name} 的印象")
+                    if suc:
+                        self.opinions[player_name] = content.strip()
+                        print(f"{self.name} 更新了对 {player_name} 的印象")
+                        continue
+                    print('反思玩家时因报错跳过一次机会')
                 except Exception as e:
-                    a = a + 1
+                    a += 1
                     time.sleep(60)
                     print(f"反思玩家 {player_name} 时出错: {str(e)}")
 
